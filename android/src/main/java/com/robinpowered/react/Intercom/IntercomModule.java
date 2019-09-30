@@ -43,6 +43,11 @@ public class IntercomModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void initialize(String apiKey, String appId) {
+        Intercom.initialize(getCurrentActivity().getApplication(), apiKey, appId);
+    }
+
+    @ReactMethod
     public void registerIdentifiedUser(ReadableMap options, Promise promise) {
         try {
             if (options.hasKey("email") && options.getString("email").length() > 0) {
@@ -390,4 +395,3 @@ public class IntercomModule extends ReactContextBaseJavaModule {
         return deconstructedList;
     }
 }
-
