@@ -42,6 +42,11 @@ public class IntercomModule extends ReactContextBaseJavaModule {
         return MODULE_NAME;
     }
 
+    @Override
+    public boolean canOverrideExistingModule() {        
+        return true;
+    }
+
     @ReactMethod
     public void initialize(String apiKey, String appId) {
         Intercom.initialize(getCurrentActivity().getApplication(), apiKey, appId);
@@ -50,15 +55,23 @@ public class IntercomModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void registerIdentifiedUser(ReadableMap options, Promise promise) {
         try {
-            if (options.hasKey("email") && options.getString("email").length() > 0) {
+            Boolean hasEmail = options.hasKey("email") && options.getString("email").length() > 0;
+            Boolean hasUserId = options.hasKey("userId") && options.getString("userId").length() > 0;
+            if (hasEmail && hasUserId) {
                 Intercom.client().registerIdentifiedUser(
-                        new Registration().withEmail(options.getString("email"))
+                        new Registration().withEmail(options.getString("email")).withUserId(options.getString("userId"))
                 );
                 Log.i(TAG, "registerIdentifiedUser with userEmail");
                 promise.resolve(null);
-            } else if (options.hasKey("userId") && options.getString("userId").length() > 0) {
+            } else if (hasEmail) {
                 Intercom.client().registerIdentifiedUser(
-                        new Registration().withUserId(options.getString("userId"))
+                    Registration.create().withEmail(options.getString("email"))
+                );
+                Log.i(TAG, "registerIdentifiedUser with userEmail");
+                promise.resolve(null);
+            } else if (hasUserId) {
+                Intercom.client().registerIdentifiedUser(
+                    Registration.create().withUserId(options.getString("userId"))
                 );
                 Log.i(TAG, "registerIdentifiedUser with userId");
                 promise.resolve(null);
@@ -82,6 +95,28 @@ public class IntercomModule extends ReactContextBaseJavaModule {
             } else {
                 Log.e(TAG, "sendTokenToIntercom; getCurrentActivity() is null");
             }
+        } catch(Exception e) {
+            promise.reject(e.toString());
+        }
+    }
+  
+    @ReactMethod
+    public void presentCarousel(String carouselID, Promise promise) {
+        try {
+            Intercom.client().displayCarousel(carouselID);
+            Log.i(TAG, "presentCarousel");
+            promise.resolve(null);
+        } catch(Exception e) {
+            promise.reject(e.toString());
+        }
+    }
+
+    @ReactMethod
+    public void presentArticle(String articleID, Promise promise) {
+        try {
+            Intercom.client().displayArticle(articleID);
+            Log.i(TAG, "displayArticle");
+            promise.resolve(null);
         } catch(Exception e) {
             promise.reject(e.toString());
         }
