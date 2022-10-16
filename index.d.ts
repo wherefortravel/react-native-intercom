@@ -7,6 +7,7 @@ type VisibilityType = IVisibility[keyof IVisibility];
 
 interface INotifications {
   UNREAD_COUNT: 'UNREAD_CHANGE_NOTIFICATION';
+  WINDOW_DID_SHOW: 'WINDOW_DID_SHOW';
   WINDOW_DID_HIDE: 'WINDOW_DID_HIDE';
 }
 declare const Notifications: INotifications;
@@ -16,6 +17,18 @@ declare const Notifications: INotifications;
  * @param token
  */
 export function sendTokenToIntercom(token: any): Promise<void>;
+
+/**
+ * presentCarousel
+ * @param carouselID
+ */
+export function presentCarousel(carouselID: String): Promise<void>;
+
+/**
+ * presentArticle
+ * @param articleID
+ */
+ export function presentArticle(articleID: String): Promise<void>;
 
 /**
  * registerUnidentifiedUser
@@ -63,9 +76,9 @@ export function logout(): Promise<void>;
 /**
  * Log an event
  * @param {string} eventName
- * @param {[key: string]: string} metadata
+ * @param {[key: string]: string | number | boolean } metadata
  */
-export function logEvent(eventName: string, metadata: { [key: string]: string }): Promise<void>;
+export function logEvent(eventName: string, metadata: { [key: string]: string | number | boolean }): Promise<void>;
 
 /**
  * handlePushMessage
