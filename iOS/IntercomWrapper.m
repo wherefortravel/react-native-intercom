@@ -9,6 +9,8 @@
 #import "IntercomWrapper.h"
 #import "IntercomUserAttributesBuilder.h"
 #import <Intercom/Intercom.h>
+#import <React/RCTUtils.h>
+#import <React/RCTUtilsUIOverride.h>
 
 @implementation IntercomWrapper
 
@@ -21,7 +23,7 @@ RCT_EXPORT_METHOD(initialize:(NSString*)apiKey appId:(NSString*)appId) {
 
 // Available as NativeModules.IntercomWrapper.registerIdentifiedUser
 RCT_EXPORT_METHOD(registerIdentifiedUser:(NSDictionary*)options resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    NSLog(@"registerIdentifiedUser with %@", options);
+    NSLog(@"registerIdentifiedUser");
 
     NSString* userId      = options[@"userId"];
     NSString* userEmail   = options[@"email"];
@@ -64,6 +66,20 @@ RCT_EXPORT_METHOD(registerUnidentifiedUser :(RCTPromiseResolveBlock)resolve :(RC
     resolve([NSNull null]);
 };
 
+// Available as NativeModules.IntercomWrapper.presentCarousel
+RCT_EXPORT_METHOD(presentCarousel:(NSString*)carouselID resolver: (RCTPromiseResolveBlock)resolve rejector:(RCTPromiseRejectBlock)reject) {
+    NSLog(@"presentCarousel");
+    [Intercom presentCarousel:carouselID];
+    resolve([NSNull null]);
+};
+
+// Available as NativeModules.IntercomWrapper.presentArticle
+RCT_EXPORT_METHOD(presentArticle:(NSString*)articleID resolver: (RCTPromiseResolveBlock)resolve rejector:(RCTPromiseRejectBlock)reject) {
+    NSLog(@"presentArticle");
+    [Intercom presentArticle:articleID];
+    resolve([NSNull null]);
+};
+
 // Available as NativeModules.IntercomWrapper.logout
 RCT_EXPORT_METHOD(logout :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
     NSLog(@"logout");
@@ -77,7 +93,7 @@ RCT_EXPORT_METHOD(logout :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBloc
 
 // Available as NativeModules.IntercomWrapper.updateUser
 RCT_EXPORT_METHOD(updateUser:(NSDictionary*)options resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-    NSLog(@"updateUser with %@", options);
+    NSLog(@"updateUser");
     NSDictionary* attributes = options;
     [Intercom updateUser:[IntercomUserAttributesBuilder userAttributesFromDictionary:attributes]];
     resolve([NSNull null]);
@@ -108,8 +124,10 @@ RCT_EXPORT_METHOD(handlePushMessage :(RCTPromiseResolveBlock)resolve :(RCTPromis
 // Available as NativeModules.IntercomWrapper.displayMessenger
 RCT_EXPORT_METHOD(displayMessenger :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
     NSLog(@"displayMessenger");
-
+    
     dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *controller = RCTPresentedViewController();
+        [RCTUtilsUIOverride setPresentedViewController:controller];
         [Intercom presentMessenger];
     });
 
@@ -121,7 +139,7 @@ RCT_EXPORT_METHOD(hideMessenger :(RCTPromiseResolveBlock)resolve :(RCTPromiseRej
     NSLog(@"hideMessenger");
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        [Intercom hideMessenger];
+        [Intercom hideIntercom];
     });
 
     resolve([NSNull null]);
@@ -130,8 +148,10 @@ RCT_EXPORT_METHOD(hideMessenger :(RCTPromiseResolveBlock)resolve :(RCTPromiseRej
 // Available as NativeModules.IntercomWrapper.displayMessageComposer
 RCT_EXPORT_METHOD(displayMessageComposer :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
     NSLog(@"displayMessageComposer");
-
+    
     dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *controller = RCTPresentedViewController();
+        [RCTUtilsUIOverride setPresentedViewController:controller];
         [Intercom presentMessageComposer];
     });
 
@@ -140,8 +160,10 @@ RCT_EXPORT_METHOD(displayMessageComposer :(RCTPromiseResolveBlock)resolve :(RCTP
 
 RCT_EXPORT_METHOD(displayMessageComposerWithInitialMessage:(NSString*)message resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     NSLog(@"displayMessageComposerWithInitialMessage");
-
+    
     dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *controller = RCTPresentedViewController();
+        [RCTUtilsUIOverride setPresentedViewController:controller];
         [Intercom presentMessageComposerWithInitialMessage:message];
     });
 
@@ -151,8 +173,10 @@ RCT_EXPORT_METHOD(displayMessageComposerWithInitialMessage:(NSString*)message re
 // Available as NativeModules.IntercomWrapper.displayConversationsList
 RCT_EXPORT_METHOD(displayConversationsList :(RCTPromiseResolveBlock)resolve :(RCTPromiseRejectBlock)reject) {
     NSLog(@"displayConversationsList");
-
+    
     dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *controller = RCTPresentedViewController();
+        [RCTUtilsUIOverride setPresentedViewController:controller];
         [Intercom presentConversationList];
     });
 
@@ -173,9 +197,11 @@ RCT_EXPORT_METHOD(displayHelpCenter :(RCTPromiseResolveBlock)resolve :(RCTPromis
     NSLog(@"displayHelpCenter");
     
     dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *controller = RCTPresentedViewController();
+        [RCTUtilsUIOverride setPresentedViewController:controller];
         [Intercom presentHelpCenter];
     });
-    
+
     resolve([NSNull null]);
 };
 
@@ -206,7 +232,22 @@ RCT_EXPORT_METHOD(setInAppMessageVisibility:(NSString*)visibilityString resolver
 // Available as NativeModules.IntercomWrapper.setupAPN
 RCT_EXPORT_METHOD(setupAPN:(NSString*)deviceToken resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     NSLog(@"setupAPN with %@", deviceToken);
-    [Intercom setDeviceToken:[deviceToken dataUsingEncoding:NSUTF8StringEncoding]];
+
+    // Convert device token hex string back to initial NSData format
+    // as received in -application:didRegisterForRemoteNotificationsWithDeviceToken:
+    // that is expected by -setDeviceToken:
+    NSMutableData *deviceTokenData = [NSMutableData new];
+    unsigned char whole_byte;
+    char byte_chars[3] = {'\0','\0','\0'};
+    int i;
+    for (i=0; i < [deviceToken length] / 2; i++) {
+      byte_chars[0] = [deviceToken characterAtIndex:i*2];
+      byte_chars[1] = [deviceToken characterAtIndex:i*2+1];
+      whole_byte = strtol(byte_chars, NULL, 16);
+      [deviceTokenData appendBytes:&whole_byte length:1];
+    }
+
+    [Intercom setDeviceToken:deviceTokenData];
     resolve([NSNull null]);
 };
 
